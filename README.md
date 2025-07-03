@@ -32,7 +32,7 @@ Before running the installer, ensure you have the following dependencies:
 1. **Download the installer**:
 
     ```bash
-    wget https://raw.githubusercontent.com/your-username/CursorInstaller/master/cursor-install.sh
+    wget https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh
     chmod +x cursor-install.sh
     ```
 
@@ -221,9 +221,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
--   **Issues**: [GitHub Issues](https://github.com/your-username/CursorInstaller/issues)
--   **Discussions**: [GitHub Discussions](https://github.com/your-username/CursorInstaller/discussions)
--   **Email**: your-email@example.com
+-   **Issues**: [GitHub Issues](https://github.com/khodealib/CursorInstaller/issues)
+-   **Discussions**: [GitHub Discussions](https://github.com/khodealib/CursorInstaller/discussions)
 
 ---
 
