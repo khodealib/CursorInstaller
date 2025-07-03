@@ -34,7 +34,7 @@ The installer requires the following dependencies:
 1. **Run the installer**:
 
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh | bash
+    sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh)"
     ```
 
 2. **Choose your option**:
