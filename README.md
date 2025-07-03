@@ -31,26 +31,19 @@ The installer requires the following dependencies:
 
 ## 🚀 Quick Start
 
-1. **Download the installer**:
+1. **Run the installer**:
 
     ```bash
-    wget https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh
-    chmod +x cursor-install.sh
+    curl -fsSL https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh | bash
     ```
 
-2. **Run the installer**:
-
-    ```bash
-    ./cursor-install.sh
-    ```
-
-3. **Choose your option**:
+2. **Choose your option**:
 
     - `1` - Install Cursor AI IDE
     - `2` - Update existing installation
     - `3` - Uninstall Cursor AI IDE
 
-4. **Start using Cursor**:
+3. **Start using Cursor**:
     ```bash
     cursor                    # Launch Cursor
     cursor /path/to/project   # Open a project
