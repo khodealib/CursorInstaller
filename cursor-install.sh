@@ -5,6 +5,7 @@ CURSOR_EXTRACT_DIR="/opt/Cursor"
 ICON_PATH="/usr/share/pixmaps/cursor.png"
 EXECUTABLE_PATH="${CURSOR_EXTRACT_DIR}/AppRun"
 DESKTOP_ENTRY_PATH="/usr/share/applications/cursor.desktop"
+SYMLINK_PATH="/usr/local/bin/cursor"
 
 # --- Download Latest Cursor AppImage Function ---
 download_latest_cursor_appimage() {
@@ -114,7 +115,12 @@ EOL
     # Update desktop database
     sudo update-desktop-database
 
+    # Create symlink for command line access
+    echo "Creating command line symlink..."
+    sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH"
+
     echo "✅ Cursor installation complete!"
+    echo "You can now run 'cursor' from anywhere in the terminal!"
 }
 
 # --- Update Function ---
@@ -160,6 +166,10 @@ updateCursor() {
     sudo rm -f "$CURSOR_DOWNLOAD_PATH"
     sudo rm -rf /tmp/squashfs-root
 
+    # Update symlink for command line access
+    echo "Updating command line symlink..."
+    sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH"
+
     echo "✅ Cursor updated successfully."
 }
 
@@ -188,6 +198,11 @@ uninstallCursor() {
     if [ -f "$ICON_PATH" ]; then
         sudo rm -f "$ICON_PATH"
         echo "✅ Removed icon file."
+    fi
+
+    if [ -L "$SYMLINK_PATH" ] || [ -f "$SYMLINK_PATH" ]; then
+        sudo rm -f "$SYMLINK_PATH"
+        echo "✅ Removed command line symlink."
     fi
 
     # Update desktop database
