@@ -1,261 +1,198 @@
-# 🎯 Cursor AI IDE Installer
+# Cursor AI IDE Installer for Linux
 
-A convenient bash script to install, update, and uninstall [Cursor AI IDE](https://cursor.com) on Linux systems. This
-installer automatically downloads the latest Cursor AppImage and sets up a proper system integration with desktop
-entries and icons.
+This project provides a fully rewritten, robust, and user-friendly installer script for installing, updating, and uninstalling the Cursor AI IDE on Linux systems. It enhances compatibility across major Linux distributions and offers an improved command-line interface (CLI) experience with dynamic feedback and versatile options.
 
-## ✨ Features
+---
 
--   **🚀 Easy Installation**: One-command installation with automatic AppImage download
--   **📦 Smart Dependencies**: Automatically detects and installs required packages
--   **🔄 Auto-Update**: Download and install the latest version automatically
--   **🗑️ Clean Uninstall**: Complete removal of all installed files and desktop entries
--   **🎨 Desktop Integration**: Creates proper desktop entries with icons
--   **⌨️ Command Line Access**: Adds `cursor` command to PATH (like VSCode's `code` command)
--   **📱 Interactive Menu**: User-friendly menu interface with ASCII art
--   **🔧 Flexible Options**: Support for both automatic download and local AppImage files
--   **🐧 Multi-Distribution Support**: Works with apt, yum, dnf, pacman, and zypper package managers
+## Features
 
-## 📋 Prerequisites
+### User Interface Improvements
+- ANSI color-formatted ASCII art logo for a visually appealing CLI experience  
+- Dynamic progress bars and spinners to provide real-time installation feedback  
+- Clean, straightforward CLI messages without emojis for professional output  
 
-The installer requires the following dependencies:
+### Enhanced Dependency Management
+- Automatic detection of required dependencies  
+- Smart package manager support across popular distros including APT, DNF, YUM, Pacman, and Zypper  
+- Visualized installation progress per package for clarity  
 
--   **curl** - For downloading files
--   **wget** - For downloading AppImage files
--   **jq** - For parsing JSON responses
--   **figlet** - For ASCII art display
--   **rsync** - For file synchronization
+### AppImage and Native Installer Support
+- Attempts native installation using system packages (`.deb`, `.rpm`, AUR) when available  
+- Automatic fallback to downloading and installing the AppImage version if native installation is not feasible  
+- Option to manually specify a local AppImage file path for offline or custom installations  
 
-> **✨ Auto-Installation**: The script automatically detects and installs missing dependencies on supported systems
-> (Ubuntu/Debian, CentOS/RHEL, Fedora, Arch Linux, openSUSE). You don't need to install these manually!
+### System Integration
+- Creates proper desktop entries (`.desktop` files) for seamless menu integration  
+- Installs application icons for easy identification  
+- Adds a command-line symlink (`cursor`) to `/usr/local/bin` for VSCode-like command line launching  
 
-## 🚀 Quick Start
+### Interactive and Flag-Based Operation Modes
+- Interactive menu-driven installer for ease of use, especially for beginners  
+- Support for direct flags (`--install`, `--update`, `--uninstall`, `--help`) enabling scripting and automation  
 
-1. **Run the installer**:
+### Update Process
+- Safe and reliable update mechanism with automatic backup of the previous installation  
+- Rollback support on update failure to prevent broken installs  
 
-    ```bash
-    sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh)"
-    ```
+### Uninstallation
+- Complete removal of installed files, desktop entries, icons, and command-line symlinks  
+- Clean system state restoration after uninstall  
 
-2. **Choose your option**:
+---
 
-    - `1` - Install Cursor AI IDE
-    - `2` - Update existing installation
-    - `3` - Uninstall Cursor AI IDE
+## Prerequisites
 
-3. **Start using Cursor**:
-    ```bash
-    cursor                    # Launch Cursor
-    cursor /path/to/project   # Open a project
-    cursor .                  # Open current directory
-    ```
+The installer requires these packages:
 
-## 📖 Detailed Usage
+- `curl`  
+- `wget`  
+- `jq`  
+- `figlet`  
+- `rsync`  
 
-### Installation Process
+The script detects and installs any missing dependencies on supported distributions automatically.
 
-When you choose to install Cursor, you'll have two options:
+---
 
-1. **Automatic Download** (Recommended):
+## Supported Linux Distributions
 
-    - Downloads the latest stable version from Cursor's official API
-    - Automatically handles version detection and download
+Tested and compatible with major Linux distributions using the following package managers:
 
-2. **Local AppImage**:
-    - Use an existing AppImage file you've downloaded
-    - Useful for offline installations or specific versions
+- `apt` (Ubuntu, Debian, Linux Mint)  
+- `dnf` (Fedora, CentOS 8+, RHEL 8+)  
+- `yum` (CentOS, RHEL 7 and older)  
+- `pacman` (Arch Linux, Manjaro)  
+- `zypper` (openSUSE, SLES)  
 
-### Installation Locations
+---
 
-The installer sets up Cursor in the following locations:
+## Quick Start
 
--   **Application**: `/opt/Cursor/`
--   **Desktop Entry**: `/usr/share/applications/cursor.desktop`
--   **Icon**: `/usr/share/pixmaps/cursor.png`
--   **Executable**: `/opt/Cursor/AppRun`
--   **Command Line Symlink**: `/usr/local/bin/cursor`
-
-### Desktop Integration
-
-After installation, Cursor will be available:
-
--   In your application menu under "Development"
--   As a desktop entry with proper icon
--   From the command line using the `cursor` command (like VSCode's `code` command)
--   Launchable from command line via the desktop entry
-
-## 🔧 Advanced Usage
-
-### Running Cursor from Command Line
-
-After installation, you can run Cursor in several ways:
-
-**Using the `cursor` command** (Recommended - works like VSCode's `code` command):
+Run the installer with root privileges:
 
 ```bash
-cursor                    # Launch Cursor
-cursor /path/to/project   # Open a specific project
-cursor file.txt           # Open a specific file
-cursor .                  # Open current directory
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/khodealib/CursorInstaller/master/cursor-install.sh)"
 ```
 
-**Direct execution**:
+Follow the interactive menu or use command-line flags:
 
-```bash
-/opt/Cursor/AppRun
-```
+* `--install` : Install Cursor IDE
+* `--update` : Update existing installation
+* `--uninstall` : Remove Cursor IDE completely
+* `--help` : Display usage instructions
 
-**Using the desktop entry**:
+---
 
-```bash
-gtk-launch cursor
-```
+## Detailed Usage
 
-### Manual Installation Steps
+### Installation
 
-If you prefer to understand what the script does:
+You can choose between:
 
-1. Downloads/extracts the Cursor AppImage
-2. Copies files to `/opt/Cursor/`
-3. Creates a desktop entry file
-4. Installs the application icon
-5. Creates a command line symlink (`/usr/local/bin/cursor`)
-6. Updates the desktop database
+* **Automatic Native Installation**: Installs the native package if available for your distro.
+* **AppImage Installation**: Downloads and installs the latest Cursor AppImage or uses a manually specified AppImage file.
 
-## 🛠️ Troubleshooting
+### Updating
 
-### Common Issues
+The update process backs up your current installation before applying the new version. If the update fails, it restores the previous state automatically.
 
-**Permission Denied**:
+### Uninstallation
+
+Removes all installed files including:
+
+* Application files in `/opt/Cursor/`
+* Desktop entries in `/usr/share/applications/cursor.desktop`
+* Application icon in `/usr/share/pixmaps/cursor.png`
+* Command-line symlink `/usr/local/bin/cursor`
+
+---
+
+## Manual Operation
+
+If preferred, you can manually perform the following steps:
+
+1. Download and extract the Cursor AppImage or native package
+2. Copy application files to `/opt/Cursor/`
+3. Create a desktop entry in `/usr/share/applications/`
+4. Install the icon in `/usr/share/pixmaps/`
+5. Create a symlink in `/usr/local/bin/` pointing to the executable
+6. Update the desktop database using `update-desktop-database`
+
+---
+
+## Troubleshooting
+
+### Permission Issues
+
+Ensure the installer script is executable:
 
 ```bash
 chmod +x cursor-install.sh
 ```
 
-**Missing Dependencies**:
+### Missing Dependencies
 
-The script automatically installs missing dependencies, but if you encounter issues:
+Manually install missing dependencies using your package manager if automatic install fails:
 
 ```bash
-# For Ubuntu/Debian
+# Ubuntu/Debian example
 sudo apt-get update
 sudo apt-get install curl wget jq figlet rsync
-
-# For Fedora
-sudo dnf install curl wget jq figlet rsync
-
-# For CentOS/RHEL
-sudo yum install curl wget jq figlet rsync
-
-# For Arch Linux
-sudo pacman -S curl wget jq figlet rsync
-
-# For openSUSE
-sudo zypper install curl wget jq figlet rsync
 ```
 
-**Download Fails**:
+### Desktop Entry Missing
 
--   Check your internet connection
--   Try using option 2 with a manually downloaded AppImage
--   Verify the Cursor API is accessible
-
-**Desktop Entry Not Appearing**:
+Run:
 
 ```bash
 sudo update-desktop-database
 ```
 
-**`cursor` Command Not Found**:
+### `cursor` Command Not Found
+
+Verify the symlink:
 
 ```bash
-# Check if symlink exists
 ls -la /usr/local/bin/cursor
-
-# If missing, reinstall or create manually
-sudo ln -sf /opt/Cursor/AppRun /usr/local/bin/cursor
-
-# Make sure /usr/local/bin is in your PATH
-echo $PATH | grep -q /usr/local/bin || echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
 ```
 
-**Unsupported Package Manager**:
-
-If you're using a distribution not listed above, manually install the required packages:
+Create it manually if missing:
 
 ```bash
-# Check what package manager you have
-which apt-get yum dnf pacman zypper
-
-# Install packages manually using your system's package manager
-# Then run the installer again
+sudo ln -sf /opt/Cursor/AppRun /usr/local/bin/cursor
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Commit your changes**: `git commit -m 'Add amazing feature'`
-4. **Push to the branch**: `git push origin feature/amazing-feature`
-5. **Open a Pull Request**
-
-### Development Guidelines
-
--   Follow existing code style and formatting
--   Test your changes on multiple Linux distributions
--   Update documentation for any new features
--   Ensure backward compatibility
-
-## 📊 Compatibility
-
-**Tested On**:
-
--   Ubuntu 24.04 LTS
--   Ubuntu 22.04 LTS
--   Debian 12
--   Linux Mint 21+
-
-**Supported Package Managers**:
-
--   **apt-get** (Ubuntu, Debian, Linux Mint)
--   **yum** (CentOS, RHEL 7 and older)
--   **dnf** (Fedora, CentOS 8+, RHEL 8+)
--   **pacman** (Arch Linux, Manjaro)
--   **zypper** (openSUSE, SLES)
-
-**Should Work On**:
-
--   Most Linux distributions with supported package managers
--   Systems with `systemd` and standard directory structure
-
-## 🔒 Security
-
-This installer:
-
--   Only downloads from official Cursor sources
--   Verifies file integrity before installation
--   Uses secure download methods (HTTPS)
--   Requires explicit user confirmation for destructive operations
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
--   [Cursor AI](https://cursor.com) for creating an amazing AI-powered IDE
--   The Linux community for continuous support and feedback
--   Contributors who help improve this installer
-
-## 📞 Support
-
--   **Issues**: [GitHub Issues](https://github.com/khodealib/CursorInstaller/issues)
--   **Discussions**: [GitHub Discussions](https://github.com/khodealib/CursorInstaller/discussions)
+Ensure `/usr/local/bin` is in your PATH environment variable.
 
 ---
 
-⭐ **Star this repository** if you found it helpful!
+## Contributing
 
-💡 **Have suggestions?** Open an issue or pull request!
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m "Add your feature"`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
+
+Please maintain code style, add tests, and update documentation accordingly.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Support
+
+For issues and discussions, visit:
+
+* [GitHub Issues](https://github.com/khodealib/CursorInstaller/issues)
+* [GitHub Discussions](https://github.com/khodealib/CursorInstaller/discussions)
+
+---
+
+*Thank you for using the Cursor AI IDE Installer.*
