@@ -7,6 +7,105 @@ EXECUTABLE_PATH="${CURSOR_EXTRACT_DIR}/AppRun"
 DESKTOP_ENTRY_PATH="/usr/share/applications/cursor.desktop"
 SYMLINK_PATH="/usr/local/bin/cursor"
 
+# --- Required Dependencies ---
+REQUIRED_PACKAGES=("curl" "wget" "jq" "figlet" "rsync")
+
+# --- Check and Install Dependencies Function ---
+check_and_install_dependencies() {
+    echo "🔍 Checking system dependencies..."
+
+    local missing_packages=()
+    local packages_to_install=()
+
+    # Check each required package
+    for package in "${REQUIRED_PACKAGES[@]}"; do
+        if ! command -v "$package" &>/dev/null; then
+            missing_packages+=("$package")
+            packages_to_install+=("$package")
+        fi
+    done
+
+    # If no missing packages, return success
+    if [ ${#missing_packages[@]} -eq 0 ]; then
+        echo "✅ All required dependencies are already installed."
+        return 0
+    fi
+
+    # Display missing packages
+    echo "⚠️  Missing dependencies: ${missing_packages[*]}"
+
+    # Detect package manager and install missing packages
+    if command -v apt-get &>/dev/null; then
+        echo "📦 Installing missing packages using apt-get..."
+        sudo apt-get update
+        for package in "${packages_to_install[@]}"; do
+            echo "Installing $package..."
+            if ! sudo apt-get install -y "$package"; then
+                echo "❌ Failed to install $package"
+                return 1
+            fi
+        done
+    elif command -v yum &>/dev/null; then
+        echo "📦 Installing missing packages using yum..."
+        for package in "${packages_to_install[@]}"; do
+            echo "Installing $package..."
+            if ! sudo yum install -y "$package"; then
+                echo "❌ Failed to install $package"
+                return 1
+            fi
+        done
+    elif command -v dnf &>/dev/null; then
+        echo "📦 Installing missing packages using dnf..."
+        for package in "${packages_to_install[@]}"; do
+            echo "Installing $package..."
+            if ! sudo dnf install -y "$package"; then
+                echo "❌ Failed to install $package"
+                return 1
+            fi
+        done
+    elif command -v pacman &>/dev/null; then
+        echo "📦 Installing missing packages using pacman..."
+        sudo pacman -Sy
+        for package in "${packages_to_install[@]}"; do
+            echo "Installing $package..."
+            if ! sudo pacman -S --noconfirm "$package"; then
+                echo "❌ Failed to install $package"
+                return 1
+            fi
+        done
+    elif command -v zypper &>/dev/null; then
+        echo "📦 Installing missing packages using zypper..."
+        for package in "${packages_to_install[@]}"; do
+            echo "Installing $package..."
+            if ! sudo zypper install -y "$package"; then
+                echo "❌ Failed to install $package"
+                return 1
+            fi
+        done
+    else
+        echo "❌ No supported package manager found (apt-get, yum, dnf, pacman, zypper)"
+        echo "Please install the following packages manually: ${missing_packages[*]}"
+        return 1
+    fi
+
+    # Verify installation
+    echo "🔍 Verifying installation..."
+    local still_missing=()
+    for package in "${missing_packages[@]}"; do
+        if ! command -v "$package" &>/dev/null; then
+            still_missing+=("$package")
+        fi
+    done
+
+    if [ ${#still_missing[@]} -eq 0 ]; then
+        echo "✅ All dependencies installed successfully!"
+        return 0
+    else
+        echo "❌ Some packages are still missing: ${still_missing[*]}"
+        return 1
+    fi
+}
+
 # --- Download Latest Cursor AppImage Function ---
 download_latest_cursor_appimage() {
     API_URL="https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
@@ -40,6 +139,12 @@ installCursor() {
         return
     fi
 
+    # Check and install dependencies first
+    if ! check_and_install_dependencies; then
+        echo "❌ Failed to install required dependencies. Exiting."
+        exit 1
+    fi
+
     figlet -f slant "Install Cursor"
     echo "1. Download latest AppImage automatically"
     echo "2. Provide local AppImage path"
@@ -48,13 +153,6 @@ installCursor() {
     local CURSOR_DOWNLOAD_PATH=""
 
     if [ "$appimage_option" = "1" ]; then
-        for cmd in curl wget jq; do
-            if ! command -v $cmd &>/dev/null; then
-                echo "$cmd not found. Installing..."
-                sudo apt-get update
-                sudo apt-get install -y $cmd
-            fi
-        done
         CURSOR_DOWNLOAD_PATH=$(download_latest_cursor_appimage | tail -n 1)
         if [ $? -ne 0 ] || [ ! -f "$CURSOR_DOWNLOAD_PATH" ]; then
             echo "❌ Download failed. Enter path manually? (y/n)"
@@ -128,6 +226,12 @@ updateCursor() {
     if [ ! -d "$CURSOR_EXTRACT_DIR" ]; then
         echo "❌ Cursor is not installed."
         return
+    fi
+
+    # Check and install dependencies first
+    if ! check_and_install_dependencies; then
+        echo "❌ Failed to install required dependencies. Exiting."
+        exit 1
     fi
 
     figlet -f slant "Update Cursor"
@@ -212,12 +316,6 @@ uninstallCursor() {
 }
 
 # --- Main Menu ---
-if ! command -v figlet &>/dev/null; then
-    echo "Installing figlet..."
-    sudo apt-get update
-    sudo apt-get install -y figlet
-fi
-
 figlet -f slant "Cursor AI IDE"
 echo "Ubuntu 24.04 compatible"
 echo "--------------------------------------------"

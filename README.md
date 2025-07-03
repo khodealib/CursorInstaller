@@ -7,17 +7,18 @@ entries and icons.
 ## ✨ Features
 
 -   **🚀 Easy Installation**: One-command installation with automatic AppImage download
+-   **📦 Smart Dependencies**: Automatically detects and installs required packages
 -   **🔄 Auto-Update**: Download and install the latest version automatically
 -   **🗑️ Clean Uninstall**: Complete removal of all installed files and desktop entries
 -   **🎨 Desktop Integration**: Creates proper desktop entries with icons
 -   **⌨️ Command Line Access**: Adds `cursor` command to PATH (like VSCode's `code` command)
 -   **📱 Interactive Menu**: User-friendly menu interface with ASCII art
 -   **🔧 Flexible Options**: Support for both automatic download and local AppImage files
--   **🐧 Linux Compatible**: Optimized for Ubuntu 24.04 and other Debian-based distributions
+-   **🐧 Multi-Distribution Support**: Works with apt, yum, dnf, pacman, and zypper package managers
 
 ## 📋 Prerequisites
 
-Before running the installer, ensure you have the following dependencies:
+The installer requires the following dependencies:
 
 -   **curl** - For downloading files
 -   **wget** - For downloading AppImage files
@@ -25,7 +26,8 @@ Before running the installer, ensure you have the following dependencies:
 -   **figlet** - For ASCII art display
 -   **rsync** - For file synchronization
 
-> **Note**: The script will automatically install missing dependencies on Ubuntu/Debian systems.
+> **✨ Auto-Installation**: The script automatically detects and installs missing dependencies on supported systems
+> (Ubuntu/Debian, CentOS/RHEL, Fedora, Arch Linux, openSUSE). You don't need to install these manually!
 
 ## 🚀 Quick Start
 
@@ -139,9 +141,24 @@ chmod +x cursor-install.sh
 
 **Missing Dependencies**:
 
+The script automatically installs missing dependencies, but if you encounter issues:
+
 ```bash
+# For Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install curl wget jq figlet rsync
+
+# For Fedora
+sudo dnf install curl wget jq figlet rsync
+
+# For CentOS/RHEL
+sudo yum install curl wget jq figlet rsync
+
+# For Arch Linux
+sudo pacman -S curl wget jq figlet rsync
+
+# For openSUSE
+sudo zypper install curl wget jq figlet rsync
 ```
 
 **Download Fails**:
@@ -167,6 +184,18 @@ sudo ln -sf /opt/Cursor/AppRun /usr/local/bin/cursor
 
 # Make sure /usr/local/bin is in your PATH
 echo $PATH | grep -q /usr/local/bin || echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+```
+
+**Unsupported Package Manager**:
+
+If you're using a distribution not listed above, manually install the required packages:
+
+```bash
+# Check what package manager you have
+which apt-get yum dnf pacman zypper
+
+# Install packages manually using your system's package manager
+# Then run the installer again
 ```
 
 ## 🤝 Contributing
@@ -195,9 +224,17 @@ We welcome contributions! Here's how you can help:
 -   Debian 12
 -   Linux Mint 21+
 
+**Supported Package Managers**:
+
+-   **apt-get** (Ubuntu, Debian, Linux Mint)
+-   **yum** (CentOS, RHEL 7 and older)
+-   **dnf** (Fedora, CentOS 8+, RHEL 8+)
+-   **pacman** (Arch Linux, Manjaro)
+-   **zypper** (openSUSE, SLES)
+
 **Should Work On**:
 
--   Most Debian-based distributions
+-   Most Linux distributions with supported package managers
 -   Systems with `systemd` and standard directory structure
 
 ## 🔒 Security
