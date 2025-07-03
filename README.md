@@ -1,6 +1,3 @@
-Certainly! Here's a comprehensive `README.md` reflecting your improvements, written clearly and professionally without emojis:
-
-
 # Cursor AI IDE Installer for Linux
 
 This project provides a fully rewritten, robust, and user-friendly installer script for installing, updating, and uninstalling the Cursor AI IDE on Linux systems. It enhances compatibility across major Linux distributions and offers an improved command-line interface (CLI) experience with dynamic feedback and versatile options.
