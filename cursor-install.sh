@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ============================================================================
-# Enhanced Cursor IDE Linux Installer
+# Enhanced Cursor IDE Linux Installer with AppImage Integration
 # Cross-distribution compatible installer for Cursor IDE
-# Supports Ubuntu/Debian, Fedora/RHEL, Arch Linux, and others
-# Enhanced with progress bars and screen clearing functionality
+# Supports Ubuntu/Debian, Fedora/RHEL, Arch Linux, openSUSE, and others
+# Enhanced with AppImage integration and desktop application management
 # ============================================================================
 
 # --- ANSI Color Codes ---
@@ -23,6 +23,16 @@ EXECUTABLE_PATH="${CURSOR_EXTRACT_DIR}/AppRun"
 DESKTOP_ENTRY_PATH="/usr/share/applications/cursor.desktop"
 SYMLINK_PATH="/usr/local/bin/cursor"
 REQUIRED_PACKAGES=("curl" "wget" "jq" "figlet" "rsync")
+APPIMAGE_DEPENDENCIES=("bsdtar" "file" "grep" "xdg-utils" "desktop-file-utils")
+USER_LOCAL_BIN="$HOME/.local/bin"
+USER_DESKTOP_DIR="$HOME/.local/share/applications"
+USER_ICON_DIR="$HOME/.local/share/icons"
+
+# --- AppImage Integration Variables ---
+APPIMAGE_INSTALL_DIR="$HOME/.local/bin"
+APPIMAGE_DESKTOP_DIR="$HOME/.local/share/applications"
+APPIMAGE_ICON_DIR="$HOME/.local/share/icons"
+APPIMAGE_TEMP_DIR="/tmp/appimage_integration"
 
 # --- Screen Clearing Function ---
 clear_screen() {
@@ -118,7 +128,7 @@ display_cursor_logo() {
 EOF
     echo -e "${RESET}"
     echo -e "${BOLD}${BLUE}         Advanced AI-Powered Code Editor${RESET}"
-    echo -e "${CYAN}         Linux Installation Manager${RESET}"
+    echo -e "${CYAN}         Linux Installation & AppImage Integration Manager${RESET}"
     echo ""
 }
 
@@ -154,21 +164,29 @@ show_help() {
     clear_screen
     display_cursor_logo
     echo -e "${BOLD}USAGE:${RESET}"
-    echo "  ./cursor.sh [OPTIONS]"
+    echo "  ./cursor.sh [OPTIONS] [APPIMAGE_PATH]"
     echo ""
     echo -e "${BOLD}OPTIONS:${RESET}"
-    echo "  --help        Display this help message"
-    echo "  --install     Install Cursor IDE"
-    echo "  --update      Update existing installation"
-    echo "  --uninstall   Remove Cursor IDE"
+    echo "  --help                Display this help message"
+    echo "  --install             Install Cursor IDE"
+    echo "  --update              Update existing installation"
+    echo "  --uninstall           Remove Cursor IDE"
+    echo "  --integrate-appimage  Integrate an AppImage as desktop application"
+    echo "  --list-appimages      List integrated AppImages"
+    echo "  --remove-appimage     Remove an integrated AppImage"
+    echo ""
+    echo -e "${BOLD}APPIMAGE INTEGRATION:${RESET}"
+    echo "  ./cursor.sh --integrate-appimage /path/to/app.AppImage"
+    echo "  ./cursor.sh --integrate-appimage --auto-download"
     echo ""
     echo -e "${BOLD}INTERACTIVE MODE:${RESET}"
     echo "  Run without arguments for interactive menu"
     echo ""
     echo -e "${BOLD}EXAMPLES:${RESET}"
-    echo "  ./cursor.sh              # Interactive installation"
-    echo "  ./cursor.sh --install    # Direct installation"
-    echo "  ./cursor.sh --help       # Show this help"
+    echo "  ./cursor.sh                                    # Interactive installation"
+    echo "  ./cursor.sh --install                          # Direct installation"
+    echo "  ./cursor.sh --integrate-appimage app.AppImage  # Integrate AppImage"
+    echo "  ./cursor.sh --help                             # Show this help"
     echo ""
     wait_for_input
 }
@@ -208,15 +226,34 @@ detect_distro() {
     fi
 }
 
-# --- Check and Install Dependencies ---
-check_and_install_dependencies() {
-    print_step "Checking system dependencies..."
+# --- Create User Directories ---
+create_user_directories() {
+    print_step "Creating user directories..."
+    
+    mkdir -p "$USER_LOCAL_BIN"
+    mkdir -p "$USER_DESKTOP_DIR"
+    mkdir -p "$USER_ICON_DIR"
+    mkdir -p "$APPIMAGE_TEMP_DIR"
+    
+    if [[ ":$PATH:" != *":$USER_LOCAL_BIN:"* ]]; then
+        print_info "Adding $USER_LOCAL_BIN to PATH in ~/.bashrc"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+    
+    print_success "User directories created"
+}
+
+# --- Check AppImage Dependencies ---
+check_appimage_dependencies() {
+    print_step "Checking AppImage integration dependencies..."
     
     local missing_packages=()
-    local total_packages=${#REQUIRED_PACKAGES[@]}
+    local all_packages=("${REQUIRED_PACKAGES[@]}" "${APPIMAGE_DEPENDENCIES[@]}")
+    local total_packages=${#all_packages[@]}
     local current=0
     
-    for package in "${REQUIRED_PACKAGES[@]}"; do
+    for package in "${all_packages[@]}"; do
         current=$((current + 1))
         show_progress $current $total_packages
         printf " Checking %s..." "$package"
@@ -231,11 +268,53 @@ check_and_install_dependencies() {
     printf "\n"
     
     if [ ${#missing_packages[@]} -eq 0 ]; then
-        print_success "All required dependencies are installed"
+        print_success "All dependencies are installed"
         return 0
     fi
     
     print_warning "Missing dependencies: ${missing_packages[*]}"
+    show_dependency_install_commands "${missing_packages[@]}"
+    
+    read -p "Install missing dependencies automatically? [y/N]: " install_deps
+    if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+        install_missing_dependencies "${missing_packages[@]}"
+    else
+        print_error "Please install missing dependencies manually"
+        return 1
+    fi
+}
+
+# --- Show Dependency Install Commands ---
+show_dependency_install_commands() {
+    local packages=("$@")
+    print_info "To install missing dependencies manually:"
+    
+    case $DISTRO_FAMILY in
+        debian)
+            echo "  sudo apt-get update && sudo apt-get install -y ${packages[*]}"
+            ;;
+        rhel)
+            if command -v dnf &>/dev/null; then
+                echo "  sudo dnf install -y ${packages[*]}"
+            else
+                echo "  sudo yum install -y ${packages[*]}"
+            fi
+            ;;
+        arch)
+            echo "  sudo pacman -S --needed ${packages[*]}"
+            ;;
+        suse)
+            echo "  sudo zypper install -y ${packages[*]}"
+            ;;
+        *)
+            echo "  Please install these packages using your distribution's package manager"
+            ;;
+    esac
+}
+
+# --- Install Missing Dependencies ---
+install_missing_dependencies() {
+    local packages=("$@")
     
     print_step "Updating package database..."
     case $DISTRO_FAMILY in
@@ -250,14 +329,17 @@ check_and_install_dependencies() {
         arch)
             sudo pacman -Sy --noconfirm > /dev/null 2>&1
             ;;
+        suse)
+            sudo zypper refresh > /dev/null 2>&1
+            ;;
     esac
     
     print_step "Installing missing packages..."
-    install_with_progress "${missing_packages[@]}"
+    install_with_progress "${packages[@]}"
     
     print_step "Verifying installation..."
     local still_missing=()
-    for package in "${missing_packages[@]}"; do
+    for package in "${packages[@]}"; do
         if ! command -v "$package" &>/dev/null; then
             still_missing+=("$package")
         fi
@@ -270,6 +352,306 @@ check_and_install_dependencies() {
         print_error "Some packages are still missing: ${still_missing[*]}"
         return 1
     fi
+}
+
+# --- Extract AppImage Metadata ---
+extract_appimage_metadata() {
+    local appimage_path="$1"
+    local temp_dir="$APPIMAGE_TEMP_DIR/$(basename "$appimage_path" .AppImage)"
+    
+    print_step "Extracting AppImage metadata..."
+    
+    # Clean up any existing temp directory
+    rm -rf "$temp_dir"
+    mkdir -p "$temp_dir"
+    
+    # Make AppImage executable
+    chmod +x "$appimage_path"
+    
+    # Extract AppImage contents
+    cd "$temp_dir"
+    "$appimage_path" --appimage-extract > /dev/null 2>&1
+    
+    if [ ! -d "$temp_dir/squashfs-root" ]; then
+        print_error "Failed to extract AppImage"
+        return 1
+    fi
+    
+    # Find desktop file
+    local desktop_file=""
+    if [ -f "$temp_dir/squashfs-root/"*.desktop ]; then
+        desktop_file=$(find "$temp_dir/squashfs-root/" -name "*.desktop" -type f | head -1)
+    fi
+    
+    if [ -z "$desktop_file" ]; then
+        print_warning "No desktop file found in AppImage"
+        return 1
+    fi
+    
+    # Extract information from desktop file
+    local app_name=$(grep -i "^Name=" "$desktop_file" | cut -d= -f2- | head -1)
+    local app_comment=$(grep -i "^Comment=" "$desktop_file" | cut -d= -f2- | head -1)
+    local app_icon=$(grep -i "^Icon=" "$desktop_file" | cut -d= -f2- | head -1)
+    local app_categories=$(grep -i "^Categories=" "$desktop_file" | cut -d= -f2- | head -1)
+    
+    # Find icon file
+    local icon_file=""
+    if [ -n "$app_icon" ]; then
+        icon_file=$(find "$temp_dir/squashfs-root/" -name "*$app_icon*" -type f \( -name "*.png" -o -name "*.svg" -o -name "*.xpm" \) | head -1)
+    fi
+    
+    if [ -z "$icon_file" ]; then
+        # Try to find any icon file
+        icon_file=$(find "$temp_dir/squashfs-root/" -type f \( -name "*.png" -o -name "*.svg" -o -name "*.xpm" \) | head -1)
+    fi
+    
+    # Export metadata
+    export APPIMAGE_NAME="$app_name"
+    export APPIMAGE_COMMENT="$app_comment"
+    export APPIMAGE_ICON_FILE="$icon_file"
+    export APPIMAGE_CATEGORIES="$app_categories"
+    export APPIMAGE_TEMP_DIR="$temp_dir"
+    
+    print_success "AppImage metadata extracted successfully"
+    print_info "Name: $app_name"
+    print_info "Comment: $app_comment"
+    print_info "Icon: $(basename "$icon_file" 2>/dev/null || echo "Not found")"
+    
+    return 0
+}
+
+# --- Check if AppImage Already Integrated ---
+check_appimage_integration() {
+    local appimage_path="$1"
+    local appimage_basename=$(basename "$appimage_path")
+    local appimage_name_clean=$(echo "$appimage_basename" | sed 's/\.AppImage$//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
+    
+    # Check if desktop file exists
+    local desktop_path="$USER_DESKTOP_DIR/${appimage_name_clean}.desktop"
+    if [ -f "$desktop_path" ]; then
+        print_warning "AppImage appears to be already integrated"
+        print_info "Desktop file: $desktop_path"
+        
+        read -p "Re-integrate this AppImage? [y/N]: " reintegrate
+        if [[ ! "$reintegrate" =~ ^[Yy]$ ]]; then
+            print_info "Integration cancelled"
+            return 1
+        fi
+    fi
+    
+    return 0
+}
+
+# --- Integrate AppImage ---
+integrate_appimage() {
+    local appimage_path="$1"
+    
+    if [ ! -f "$appimage_path" ]; then
+        print_error "AppImage file not found: $appimage_path"
+        return 1
+    fi
+    
+    print_step "Integrating AppImage: $(basename "$appimage_path")"
+    
+    # Check if already integrated
+    if ! check_appimage_integration "$appimage_path"; then
+        return 1
+    fi
+    
+    # Create user directories
+    create_user_directories
+    
+    # Extract metadata
+    if ! extract_appimage_metadata "$appimage_path"; then
+        print_error "Failed to extract AppImage metadata"
+        return 1
+    fi
+    
+    # Generate names
+    local appimage_basename=$(basename "$appimage_path")
+    local appimage_name_clean=$(echo "$appimage_basename" | sed 's/\.AppImage$//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
+    local target_path="$USER_LOCAL_BIN/$appimage_basename"
+    local desktop_path="$USER_DESKTOP_DIR/${appimage_name_clean}.desktop"
+    local icon_path="$USER_ICON_DIR/${appimage_name_clean}.png"
+    
+    # Copy AppImage to user bin
+    print_step "Installing AppImage to $USER_LOCAL_BIN..."
+    cp "$appimage_path" "$target_path"
+    chmod +x "$target_path"
+    
+    # Copy icon if available
+    if [ -n "$APPIMAGE_ICON_FILE" ] && [ -f "$APPIMAGE_ICON_FILE" ]; then
+        print_step "Installing icon..."
+        cp "$APPIMAGE_ICON_FILE" "$icon_path"
+    fi
+    
+    # Create desktop file
+    print_step "Creating desktop entry..."
+    cat > "$desktop_path" << EOF
+[Desktop Entry]
+Name=${APPIMAGE_NAME:-$(basename "$appimage_path" .AppImage)}
+Comment=${APPIMAGE_COMMENT:-Integrated AppImage Application}
+Exec=$target_path %F
+Icon=${icon_path}
+Type=Application
+Categories=${APPIMAGE_CATEGORIES:-Utility;}
+StartupNotify=true
+Terminal=false
+EOF
+    
+    chmod +x "$desktop_path"
+    
+    # Update desktop database
+    print_step "Updating desktop database..."
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$USER_DESKTOP_DIR" > /dev/null 2>&1
+    fi
+    
+    # Clean up temporary directory
+    print_step "Cleaning up temporary files..."
+    rm -rf "$APPIMAGE_TEMP_DIR"
+    
+    print_success "AppImage integrated successfully!"
+    print_info "Executable: $target_path"
+    print_info "Desktop entry: $desktop_path"
+    print_info "Icon: $icon_path"
+    print_info "You can now find the application in your desktop environment's application menu"
+    
+    return 0
+}
+
+# --- List Integrated AppImages ---
+list_integrated_appimages() {
+    clear_screen
+    display_cursor_logo
+    
+    print_step "Listing integrated AppImages..."
+    
+    if [ ! -d "$USER_DESKTOP_DIR" ]; then
+        print_info "No integrated AppImages found"
+        return 0
+    fi
+    
+    local found_appimages=()
+    local count=0
+    
+    for desktop_file in "$USER_DESKTOP_DIR"/*.desktop; do
+        if [ -f "$desktop_file" ]; then
+            local exec_line=$(grep "^Exec=" "$desktop_file" | cut -d= -f2-)
+            if [[ "$exec_line" =~ \.AppImage ]]; then
+                count=$((count + 1))
+                local name=$(grep "^Name=" "$desktop_file" | cut -d= -f2-)
+                local comment=$(grep "^Comment=" "$desktop_file" | cut -d= -f2-)
+                
+                echo "[$count] $name"
+                echo "    Comment: $comment"
+                echo "    Exec: $exec_line"
+                echo "    Desktop file: $desktop_file"
+                echo ""
+                
+                found_appimages+=("$desktop_file")
+            fi
+        fi
+    done
+    
+    if [ $count -eq 0 ]; then
+        print_info "No integrated AppImages found"
+    else
+        print_success "Found $count integrated AppImage(s)"
+    fi
+    
+    wait_for_input
+}
+
+# --- Remove Integrated AppImage ---
+remove_integrated_appimage() {
+    clear_screen
+    display_cursor_logo
+    
+    print_step "Remove integrated AppImage..."
+    
+    if [ ! -d "$USER_DESKTOP_DIR" ]; then
+        print_info "No integrated AppImages found"
+        wait_for_input
+        return 0
+    fi
+    
+    local appimage_list=()
+    local count=0
+    
+    # Build list of integrated AppImages
+    for desktop_file in "$USER_DESKTOP_DIR"/*.desktop; do
+        if [ -f "$desktop_file" ]; then
+            local exec_line=$(grep "^Exec=" "$desktop_file" | cut -d= -f2- | awk '{print $1}')
+            if [[ "$exec_line" =~ \.AppImage ]]; then
+                count=$((count + 1))
+                local name=$(grep "^Name=" "$desktop_file" | cut -d= -f2-)
+                echo "[$count] $name"
+                echo "    Exec: $exec_line"
+                echo "    Desktop file: $desktop_file"
+                echo ""
+                
+                appimage_list+=("$desktop_file|$exec_line")
+            fi
+        fi
+    done
+    
+    if [ $count -eq 0 ]; then
+        print_info "No integrated AppImages found"
+        wait_for_input
+        return 0
+    fi
+    
+    read -p "Enter the number of the AppImage to remove [1-$count]: " selection
+    
+    if [[ ! "$selection" =~ ^[0-9]+$ ]] || [ "$selection" -lt 1 ] || [ "$selection" -gt "$count" ]; then
+        print_error "Invalid selection"
+        wait_for_input
+        return 1
+    fi
+    
+    local selected_item="${appimage_list[$((selection - 1))]}"
+    local desktop_file=$(echo "$selected_item" | cut -d'|' -f1)
+    local exec_path=$(echo "$selected_item" | cut -d'|' -f2)
+    local app_name=$(grep "^Name=" "$desktop_file" | cut -d= -f2-)
+    
+    print_warning "This will remove:"
+    print_info "Application: $app_name"
+    print_info "Desktop file: $desktop_file"
+    print_info "Executable: $exec_path"
+    
+    read -p "Are you sure you want to remove this AppImage integration? [y/N]: " confirm
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        print_info "Removal cancelled"
+        wait_for_input
+        return 0
+    fi
+    
+    # Remove files
+    print_step "Removing AppImage integration..."
+    
+    # Remove desktop file
+    rm -f "$desktop_file"
+    
+    # Remove executable
+    if [ -f "$exec_path" ]; then
+        rm -f "$exec_path"
+    fi
+    
+    # Remove icon (try to guess icon path)
+    local icon_name=$(basename "$desktop_file" .desktop)
+    local icon_path="$USER_ICON_DIR/${icon_name}.png"
+    if [ -f "$icon_path" ]; then
+        rm -f "$icon_path"
+    fi
+    
+    # Update desktop database
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$USER_DESKTOP_DIR" > /dev/null 2>&1
+    fi
+    
+    print_success "AppImage integration removed successfully"
+    wait_for_input
 }
 
 # --- Download Latest Cursor AppImage ---
@@ -314,7 +696,7 @@ install_cursor() {
         return 1
     fi
     
-    if ! check_and_install_dependencies; then
+    if ! check_appimage_dependencies; then
         print_error "Failed to install required dependencies"
         wait_for_input
         return 1
@@ -334,10 +716,11 @@ install_cursor() {
     print_step "Choose installation method:"
     echo "  1. Download latest AppImage automatically"
     echo "  2. Provide local AppImage path"
-    echo "  3. Cancel installation"
+    echo "  3. Integrate as user AppImage (recommended)"
+    echo "  4. Cancel installation"
     
     while true; do
-        read -p "Enter your choice [1-3]: " choice
+        read -p "Enter your choice [1-4]: " choice
         case $choice in
             1)
                 clear_screen
@@ -369,12 +752,28 @@ install_cursor() {
                 fi
                 ;;
             3)
+                clear_screen
+                display_cursor_logo
+                local download_path
+                download_path=$(download_latest_cursor_appimage)
+                if [ $? -eq 0 ] && [ -f "$download_path" ]; then
+                    integrate_appimage "$download_path"
+                    launch_cursor_prompt
+                    wait_for_input
+                    return $?
+                else
+                    print_error "Download failed"
+                    wait_for_input
+                    return 1
+                fi
+                ;;
+            4)
                 print_info "Installation cancelled"
                 wait_for_input
                 return 1
                 ;;
             *)
-                print_error "Invalid choice. Please enter 1, 2, or 3."
+                print_error "Invalid choice. Please enter 1, 2, 3, or 4."
                 ;;
         esac
     done
@@ -514,8 +913,6 @@ install_appimage() {
     
     print_info "Installing to system directory..."
     sudo mkdir -p "$CURSOR_EXTRACT_DIR"
-    
-    local total_files=$(find /tmp/squashfs-root -type f | wc -l)
     
     sudo rsync -a --progress /tmp/squashfs-root/ "$CURSOR_EXTRACT_DIR/" 2>&1 | \
     while IFS= read -r line; do
@@ -737,20 +1134,23 @@ show_main_menu() {
     clear_screen
     display_cursor_logo
     
-    echo -e "${BOLD}${BLUE}Linux Installation Manager${RESET}"
-    echo -e "${CYAN}Compatible with Ubuntu, Debian, Fedora, RHEL, Arch, and more${RESET}"
+    echo -e "${BOLD}${BLUE}Linux Installation & AppImage Integration Manager${RESET}"
+    echo -e "${CYAN}Compatible with Ubuntu, Debian, Fedora, RHEL, Arch, openSUSE, and more${RESET}"
     echo ""
     echo "----------------------------------------"
     echo "  1. Install Cursor IDE"
     echo "  2. Update Cursor IDE"
     echo "  3. Uninstall Cursor IDE"
-    echo "  4. Show Help"
-    echo "  5. Exit"
+    echo "  4. Integrate AppImage"
+    echo "  5. List Integrated AppImages"
+    echo "  6. Remove Integrated AppImage"
+    echo "  7. Show Help"
+    echo "  8. Exit"
     echo "----------------------------------------"
     echo ""
     
     while true; do
-        read -p "Choose an option [1-5]: " choice
+        read -p "Choose an option [1-8]: " choice
         case $choice in
             1)
                 install_cursor
@@ -768,17 +1168,40 @@ show_main_menu() {
                 break
                 ;;
             4)
-                show_help
+                clear_screen
+                display_cursor_logo
+                read -p "Enter AppImage file path: " appimage_path
+                if [ -f "$appimage_path" ]; then
+                    integrate_appimage "$appimage_path"
+                else
+                    print_error "File not found: $appimage_path"
+                fi
+                wait_for_input
                 show_main_menu
                 break
                 ;;
             5)
+                list_integrated_appimages
+                show_main_menu
+                break
+                ;;
+            6)
+                remove_integrated_appimage
+                show_main_menu
+                break
+                ;;
+            7)
+                show_help
+                show_main_menu
+                break
+                ;;
+            8)
                 clear_screen
                 print_info "Thank you for using Cursor IDE Linux Installer!"
                 exit 0
                 ;;
             *)
-                print_error "Invalid choice. Please enter 1, 2, 3, 4, or 5."
+                print_error "Invalid choice. Please enter 1-8."
                 ;;
         esac
     done
@@ -800,6 +1223,33 @@ main() {
             ;;
         --uninstall)
             uninstall_cursor
+            ;;
+        --integrate-appimage)
+            if [ -n "$2" ]; then
+                detect_distro
+                if [ "$2" = "--auto-download" ]; then
+                    local download_path
+                    download_path=$(download_latest_cursor_appimage)
+                    if [ $? -eq 0 ] && [ -f "$download_path" ]; then
+                        integrate_appimage "$download_path"
+                    else
+                        print_error "Download failed"
+                        exit 1
+                    fi
+                else
+                    integrate_appimage "$2"
+                fi
+            else
+                print_error "AppImage path required"
+                echo "Usage: $0 --integrate-appimage /path/to/app.AppImage"
+                exit 1
+            fi
+            ;;
+        --list-appimages)
+            list_integrated_appimages
+            ;;
+        --remove-appimage)
+            remove_integrated_appimage
             ;;
         "")
             detect_distro
