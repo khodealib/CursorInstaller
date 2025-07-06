@@ -27,7 +27,6 @@ REQUIRED_PACKAGES=("curl" "wget" "jq" "figlet" "rsync")
 # --- Screen Clearing Function ---
 clear_screen() {
     clear
-    # Alternative method for better compatibility
     printf '\033[2J\033[H'
 }
 
@@ -46,23 +45,7 @@ show_progress() {
     printf "] %d%%" $percentage
 }
 
-# --- Spinner Function ---
-show_spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
-    
-    while ps -p $pid > /dev/null 2>&1; do
-        local temp=${spinstr#?}
-        printf " [%c]  " "$spinstr"
-        spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
-}
-
-# --- Progress Bar for Downloads ---
+# --- Download Progress Function ---
 download_with_progress() {
     local url=$1
     local output=$2
@@ -70,7 +53,6 @@ download_with_progress() {
     
     print_info "$description"
     
-    # Use wget with progress bar
     wget --progress=bar:force -O "$output" "$url" 2>&1 | \
     while IFS= read -r line; do
         if [[ $line =~ [0-9]+% ]]; then
@@ -80,7 +62,7 @@ download_with_progress() {
     echo ""
 }
 
-# --- Progress Bar for Package Installation ---
+# --- Installation Progress Function ---
 install_with_progress() {
     local packages=("$@")
     local total=${#packages[@]}
@@ -89,30 +71,27 @@ install_with_progress() {
     for package in "${packages[@]}"; do
         current=$((current + 1))
         show_progress $current $total
-        printf " Installing %s..." "$package"
-        (
-            case $DISTRO_FAMILY in
-                debian)
-                    sudo apt-get install -y "$package" &>/dev/null
-                    ;;
-                rhel)
-                    if command -v dnf &>/dev/null; then
-                        sudo dnf install -y "$package" &>/dev/null
-                    else
-                        sudo yum install -y "$package" &>/dev/null
-                    fi
-                    ;;
-                arch)
-                    sudo pacman -S --noconfirm "$package" &>/dev/null
-                    ;;
-                suse)
-                    sudo zypper install -y "$package" &>/dev/null
-                    ;;
-            esac
-        ) &
-        show_spinner $!
-        wait
-        printf "\r"
+        printf " Installing %s...\n" "$package"
+        
+        case $DISTRO_FAMILY in
+            debian)
+                sudo apt-get install -y "$package" > /dev/null 2>&1
+                ;;
+            rhel)
+                if command -v dnf &>/dev/null; then
+                    sudo dnf install -y "$package" > /dev/null 2>&1
+                else
+                    sudo yum install -y "$package" > /dev/null 2>&1
+                fi
+                ;;
+            arch)
+                sudo pacman -S --noconfirm "$package" > /dev/null 2>&1
+                ;;
+            suse)
+                sudo zypper install -y "$package" > /dev/null 2>&1
+                ;;
+        esac
+        
         show_progress $current $total
         printf " Installing %s... Done\n" "$package"
     done
@@ -136,7 +115,6 @@ display_cursor_logo() {
            ██╔══██║██║    ██║██║  ██║██╔══╝             
            ██║  ██║██║    ██║██████╔╝███████╗           
            ╚═╝  ╚═╝╚═╝    ╚═╝╚═════╝ ╚══════╝           
-                                                        
 EOF
     echo -e "${RESET}"
     echo -e "${BOLD}${BLUE}         Advanced AI-Powered Code Editor${RESET}"
@@ -176,7 +154,7 @@ show_help() {
     clear_screen
     display_cursor_logo
     echo -e "${BOLD}USAGE:${RESET}"
-    echo "  ./curser.txt [OPTIONS]"
+    echo "  ./cursor.sh [OPTIONS]"
     echo ""
     echo -e "${BOLD}OPTIONS:${RESET}"
     echo "  --help        Display this help message"
@@ -188,9 +166,9 @@ show_help() {
     echo "  Run without arguments for interactive menu"
     echo ""
     echo -e "${BOLD}EXAMPLES:${RESET}"
-    echo "  ./curser.txt              # Interactive installation"
-    echo "  ./curser.txt --install    # Direct installation"
-    echo "  ./curser.txt --help       # Show this help"
+    echo "  ./cursor.sh              # Interactive installation"
+    echo "  ./cursor.sh --install    # Direct installation"
+    echo "  ./cursor.sh --help       # Show this help"
     echo ""
     wait_for_input
 }
@@ -198,10 +176,6 @@ show_help() {
 # --- Detect Linux Distribution ---
 detect_distro() {
     print_step "Detecting Linux distribution..."
-    
-    # Show progress while detecting
-    (sleep 1) &
-    show_spinner $!
     
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -242,23 +216,20 @@ check_and_install_dependencies() {
     local total_packages=${#REQUIRED_PACKAGES[@]}
     local current=0
     
-    # Check each required package with progress
     for package in "${REQUIRED_PACKAGES[@]}"; do
         current=$((current + 1))
         show_progress $current $total_packages
         printf " Checking %s..." "$package"
         
         if ! command -v "$package" &>/dev/null; then
-            printf " Checking %s... Missing\r" "$package"
+            printf " Missing\n"
             missing_packages+=("$package")
         else
-            printf " Checking %s... Found\r" "$package"
+            printf " Found\n"
         fi
-        sleep 0.2
     done
     printf "\n"
     
-    # If no missing packages, return success
     if [ ${#missing_packages[@]} -eq 0 ]; then
         print_success "All required dependencies are installed"
         return 0
@@ -266,30 +237,24 @@ check_and_install_dependencies() {
     
     print_warning "Missing dependencies: ${missing_packages[*]}"
     
-    # Update package database first
     print_step "Updating package database..."
     case $DISTRO_FAMILY in
         debian)
-            (sudo apt-get update -qq) &
-            show_spinner $!
+            sudo apt-get update -qq > /dev/null 2>&1
             ;;
         rhel)
             if command -v dnf &>/dev/null; then
-                (sudo dnf check-update) &
-                show_spinner $!
+                sudo dnf check-update > /dev/null 2>&1
             fi
             ;;
         arch)
-            (sudo pacman -Sy --noconfirm) &
-            show_spinner $!
+            sudo pacman -Sy --noconfirm > /dev/null 2>&1
             ;;
     esac
     
-    # Install missing packages with progress
     print_step "Installing missing packages..."
     install_with_progress "${missing_packages[@]}"
     
-    # Verify installation
     print_step "Verifying installation..."
     local still_missing=()
     for package in "${missing_packages[@]}"; do
@@ -315,16 +280,8 @@ download_latest_cursor_appimage() {
     local user_agent="Mozilla/5.0 (X11; Linux x86_64)"
     local download_path="/tmp/cursor-latest.AppImage"
     
-    # Get download URL with progress
     print_info "Fetching download URL..."
-    (
-        local final_url=$(curl -sL -A "$user_agent" "$api_url" | jq -r '.url // .downloadUrl')
-        echo "$final_url" > /tmp/cursor_url
-    ) &
-    show_spinner $!
-    
-    local final_url=$(cat /tmp/cursor_url)
-    rm -f /tmp/cursor_url
+    local final_url=$(curl -sL -A "$user_agent" "$api_url" | jq -r '.url // .downloadUrl')
     
     if [ -z "$final_url" ] || [ "$final_url" = "null" ]; then
         print_error "Could not retrieve download URL"
@@ -333,7 +290,6 @@ download_latest_cursor_appimage() {
     
     print_info "Download URL: $final_url"
     
-    # Download with enhanced progress bar
     download_with_progress "$final_url" "$download_path" "Downloading Cursor AppImage..."
     
     if [ $? -eq 0 ] && [ -s "$download_path" ]; then
@@ -358,14 +314,12 @@ install_cursor() {
         return 1
     fi
     
-    # Check dependencies
     if ! check_and_install_dependencies; then
         print_error "Failed to install required dependencies"
         wait_for_input
         return 1
     fi
     
-    # Try native installation first
     print_step "Attempting native package installation..."
     if try_native_installation; then
         print_success "Native installation completed successfully"
@@ -375,7 +329,6 @@ install_cursor() {
         return 0
     fi
     
-    # Fallback to AppImage
     print_info "Falling back to AppImage installation..."
     
     print_step "Choose installation method:"
@@ -451,23 +404,17 @@ try_native_installation() {
 try_debian_installation() {
     print_info "Attempting to install Cursor via .deb package..."
     
-    # Check if cursor is available in repositories
     print_step "Checking repositories..."
-    (apt-cache search cursor-ide) &
-    show_spinner $!
-    
     if apt-cache search cursor-ide &>/dev/null; then
         print_info "Found Cursor in repositories"
-        (sudo apt-get update -qq) &
-        show_spinner $!
+        sudo apt-get update -qq > /dev/null 2>&1
         
-        if sudo apt-get install -y cursor-ide &>/dev/null; then
+        if sudo apt-get install -y cursor-ide > /dev/null 2>&1; then
             print_success "Installed Cursor via apt"
             return 0
         fi
     fi
     
-    # Try downloading .deb directly
     print_step "Downloading .deb package..."
     local deb_url="https://www.cursor.com/latest/linux/deb"
     local deb_path="/tmp/cursor.deb"
@@ -476,14 +423,10 @@ try_debian_installation() {
     
     if [ -f "$deb_path" ]; then
         print_info "Installing .deb package..."
-        (sudo dpkg -i "$deb_path") &
-        show_spinner $!
         
-        if sudo dpkg -i "$deb_path" &>/dev/null; then
+        if sudo dpkg -i "$deb_path" > /dev/null 2>&1; then
             print_success "Installed Cursor via .deb package"
-            # Fix dependencies
-            (sudo apt-get install -f -y) &
-            show_spinner $!
+            sudo apt-get install -f -y > /dev/null 2>&1
             rm -f "$deb_path"
             return 0
         else
@@ -508,19 +451,13 @@ try_rhel_installation() {
         print_info "Installing .rpm package..."
         
         if command -v dnf &>/dev/null; then
-            (sudo dnf install -y "$rpm_path") &
-            show_spinner $!
-            
-            if sudo dnf install -y "$rpm_path" &>/dev/null; then
+            if sudo dnf install -y "$rpm_path" > /dev/null 2>&1; then
                 print_success "Installed Cursor via dnf"
                 rm -f "$rpm_path"
                 return 0
             fi
         elif command -v yum &>/dev/null; then
-            (sudo yum install -y "$rpm_path") &
-            show_spinner $!
-            
-            if sudo yum install -y "$rpm_path" &>/dev/null; then
+            if sudo yum install -y "$rpm_path" > /dev/null 2>&1; then
                 print_success "Installed Cursor via yum"
                 rm -f "$rpm_path"
                 return 0
@@ -536,25 +473,19 @@ try_rhel_installation() {
 try_arch_installation() {
     print_info "Attempting to install Cursor via AUR..."
     
-    # Check if yay is available
     if command -v yay &>/dev/null; then
         print_info "Using yay to install from AUR..."
-        (yay -S --noconfirm cursor-ide) &
-        show_spinner $!
         
-        if yay -S --noconfirm cursor-ide &>/dev/null; then
+        if yay -S --noconfirm cursor-ide > /dev/null 2>&1; then
             print_success "Installed Cursor via AUR (yay)"
             return 0
         fi
     fi
     
-    # Check if paru is available
     if command -v paru &>/dev/null; then
         print_info "Using paru to install from AUR..."
-        (paru -S --noconfirm cursor-ide) &
-        show_spinner $!
         
-        if paru -S --noconfirm cursor-ide &>/dev/null; then
+        if paru -S --noconfirm cursor-ide > /dev/null 2>&1; then
             print_success "Installed Cursor via AUR (paru)"
             return 0
         fi
@@ -570,42 +501,29 @@ install_appimage() {
     
     print_step "Installing Cursor from AppImage..."
     
-    # Make executable
     chmod +x "$appimage_path"
     
-    # Extract AppImage with progress
     print_info "Extracting AppImage..."
     cd /tmp
-    ("$appimage_path" --appimage-extract) &
-    show_spinner $!
+    "$appimage_path" --appimage-extract > /dev/null 2>&1
     
     if [ ! -d "/tmp/squashfs-root" ]; then
         print_error "AppImage extraction failed"
         return 1
     fi
     
-    # Install to system with progress
     print_info "Installing to system directory..."
     sudo mkdir -p "$CURSOR_EXTRACT_DIR"
     
-    # Show progress for file copying
     local total_files=$(find /tmp/squashfs-root -type f | wc -l)
-    local current_file=0
     
-    (
-        sudo rsync -a --remove-source-files /tmp/squashfs-root/ "$CURSOR_EXTRACT_DIR/"
-    ) &
-    
-    # Show progress while copying
-    while ps -p $! > /dev/null 2>&1; do
-        current_file=$(find "$CURSOR_EXTRACT_DIR" -type f 2>/dev/null | wc -l)
-        show_progress $current_file $total_files
-        printf " Copying files..."
-        sleep 0.5
+    sudo rsync -a --progress /tmp/squashfs-root/ "$CURSOR_EXTRACT_DIR/" 2>&1 | \
+    while IFS= read -r line; do
+        if [[ $line =~ [0-9]+% ]]; then
+            echo -ne "\r$line"
+        fi
     done
-    
-    show_progress $total_files $total_files
-    printf " Copying files... Complete\n"
+    echo ""
     
     if [ $? -eq 0 ]; then
         print_success "AppImage installed successfully"
@@ -624,23 +542,17 @@ install_appimage() {
 configure_desktop_integration() {
     print_step "Configuring desktop integration..."
     
-    # Install icon with progress
     print_info "Installing icon..."
-    (
-        if [ -f "${CURSOR_EXTRACT_DIR}/usr/share/icons/hicolor/128x128/apps/cursor.png" ]; then
-            sudo cp "${CURSOR_EXTRACT_DIR}/usr/share/icons/hicolor/128x128/apps/cursor.png" "$ICON_PATH"
-        elif [ -f "${CURSOR_EXTRACT_DIR}/cursor.png" ]; then
-            sudo cp "${CURSOR_EXTRACT_DIR}/cursor.png" "$ICON_PATH"
-        else
-            print_warning "Icon not found, using default"
-        fi
-    ) &
-    show_spinner $!
+    if [ -f "${CURSOR_EXTRACT_DIR}/usr/share/icons/hicolor/128x128/apps/cursor.png" ]; then
+        sudo cp "${CURSOR_EXTRACT_DIR}/usr/share/icons/hicolor/128x128/apps/cursor.png" "$ICON_PATH"
+    elif [ -f "${CURSOR_EXTRACT_DIR}/cursor.png" ]; then
+        sudo cp "${CURSOR_EXTRACT_DIR}/cursor.png" "$ICON_PATH"
+    else
+        print_warning "Icon not found, using default"
+    fi
     
-    # Create desktop entry
     print_info "Creating desktop entry..."
-    (
-        sudo tee "$DESKTOP_ENTRY_PATH" > /dev/null << EOF
+    sudo tee "$DESKTOP_ENTRY_PATH" > /dev/null << EOF
 [Desktop Entry]
 Name=Cursor AI IDE
 Comment=Advanced AI-powered code editor
@@ -652,18 +564,12 @@ MimeType=text/plain;text/x-chdr;text/x-csrc;text/x-c++hdr;text/x-c++src;text/x-j
 StartupNotify=true
 StartupWMClass=Cursor
 EOF
-    ) &
-    show_spinner $!
     
-    # Update desktop database
     print_info "Updating desktop database..."
-    (sudo update-desktop-database) &
-    show_spinner $!
+    sudo update-desktop-database > /dev/null 2>&1
     
-    # Create command line symlink
     print_info "Creating command line symlink..."
-    (sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH") &
-    show_spinner $!
+    sudo ln -sf "$EXECUTABLE_PATH" "$SYMLINK_PATH"
     
     print_success "Desktop integration configured"
     print_info "You can now run 'cursor' from the command line"
@@ -683,54 +589,41 @@ update_cursor() {
     
     print_step "Updating Cursor IDE..."
     
-    # Backup current installation
     print_info "Creating backup of current installation..."
-    (sudo cp -r "$CURSOR_EXTRACT_DIR" "${CURSOR_EXTRACT_DIR}.backup") &
-    show_spinner $!
+    sudo cp -r "$CURSOR_EXTRACT_DIR" "${CURSOR_EXTRACT_DIR}.backup"
     
-    # Try native update first
     if try_native_update; then
         print_success "Native update completed"
-        (sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup") &
-        show_spinner $!
+        sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup"
         launch_cursor_prompt
         wait_for_input
         return 0
     fi
     
-    # Fallback to AppImage update
     print_info "Updating via AppImage..."
     
     local download_path
     download_path=$(download_latest_cursor_appimage)
     if [ $? -eq 0 ] && [ -f "$download_path" ]; then
-        # Remove old installation
         print_info "Removing old installation..."
-        (sudo rm -rf "${CURSOR_EXTRACT_DIR:?}"/*) &
-        show_spinner $!
+        sudo rm -rf "${CURSOR_EXTRACT_DIR:?}"/*
         
-        # Install new version
         if install_appimage "$download_path"; then
             print_success "Update completed successfully"
-            (sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup") &
-            show_spinner $!
+            sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup"
             launch_cursor_prompt
             wait_for_input
             return 0
         else
             print_error "Update failed, restoring backup..."
-            (
-                sudo rm -rf "$CURSOR_EXTRACT_DIR"
-                sudo mv "${CURSOR_EXTRACT_DIR}.backup" "$CURSOR_EXTRACT_DIR"
-            ) &
-            show_spinner $!
+            sudo rm -rf "$CURSOR_EXTRACT_DIR"
+            sudo mv "${CURSOR_EXTRACT_DIR}.backup" "$CURSOR_EXTRACT_DIR"
             wait_for_input
             return 1
         fi
     else
         print_error "Download failed, keeping current installation"
-        (sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup") &
-        show_spinner $!
+        sudo rm -rf "${CURSOR_EXTRACT_DIR}.backup"
         wait_for_input
         return 1
     fi
@@ -742,43 +635,28 @@ try_native_update() {
     
     case $DISTRO_FAMILY in
         debian)
-            (sudo apt-get update -qq && sudo apt-get upgrade -y cursor-ide) &
-            show_spinner $!
-            
-            if sudo apt-get update -qq && sudo apt-get upgrade -y cursor-ide &>/dev/null; then
+            if sudo apt-get update -qq > /dev/null 2>&1 && sudo apt-get upgrade -y cursor-ide > /dev/null 2>&1; then
                 return 0
             fi
             ;;
         rhel)
             if command -v dnf &>/dev/null; then
-                (sudo dnf upgrade -y cursor-ide) &
-                show_spinner $!
-                
-                if sudo dnf upgrade -y cursor-ide &>/dev/null; then
+                if sudo dnf upgrade -y cursor-ide > /dev/null 2>&1; then
                     return 0
                 fi
             elif command -v yum &>/dev/null; then
-                (sudo yum update -y cursor-ide) &
-                show_spinner $!
-                
-                if sudo yum update -y cursor-ide &>/dev/null; then
+                if sudo yum update -y cursor-ide > /dev/null 2>&1; then
                     return 0
                 fi
             fi
             ;;
         arch)
             if command -v yay &>/dev/null; then
-                (yay -Syu --noconfirm cursor-ide) &
-                show_spinner $!
-                
-                if yay -Syu --noconfirm cursor-ide &>/dev/null; then
+                if yay -Syu --noconfirm cursor-ide > /dev/null 2>&1; then
                     return 0
                 fi
             elif command -v paru &>/dev/null; then
-                (paru -Syu --noconfirm cursor-ide) &
-                show_spinner $!
-                
-                if paru -Syu --noconfirm cursor-ide &>/dev/null; then
+                if paru -Syu --noconfirm cursor-ide > /dev/null 2>&1; then
                     return 0
                 fi
             fi
@@ -809,7 +687,6 @@ uninstall_cursor() {
     
     print_step "Removing Cursor IDE..."
     
-    # Remove components with progress
     local components=("$CURSOR_EXTRACT_DIR" "$DESKTOP_ENTRY_PATH" "$ICON_PATH" "$SYMLINK_PATH")
     local total=${#components[@]}
     local current=0
@@ -819,26 +696,22 @@ uninstall_cursor() {
         show_progress $current $total
         
         if [[ "$component" == "$CURSOR_EXTRACT_DIR" ]] && [ -d "$component" ]; then
-            printf " Removing application directory..."
-            (sudo rm -rf "$component") &
-            show_spinner $!
-            echo " Done"
+            printf " Removing application directory... "
+            sudo rm -rf "$component"
+            echo "Done"
         elif [ -f "$component" ] || [ -L "$component" ]; then
-            printf " Removing %s..." "$(basename "$component")"
-            (sudo rm -f "$component") &
-            show_spinner $!
-            echo " Done"
+            printf " Removing %s... " "$(basename "$component")"
+            sudo rm -f "$component"
+            echo "Done"
         else
-            printf " Skipping %s (not found)..." "$(basename "$component")"
-            echo " Done"
+            printf " Skipping %s (not found)... " "$(basename "$component")"
+            echo "Done"
         fi
     done
     echo ""
     
-    # Update desktop database
     print_info "Updating desktop database..."
-    (sudo update-desktop-database) &
-    show_spinner $!
+    sudo update-desktop-database > /dev/null 2>&1
     
     print_success "Cursor IDE has been completely removed"
     wait_for_input
@@ -913,7 +786,6 @@ show_main_menu() {
 
 # --- Main Execution ---
 main() {
-    # Parse command line arguments
     case "${1:-}" in
         --help|-h)
             show_help
